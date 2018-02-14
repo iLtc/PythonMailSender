@@ -9,7 +9,12 @@ def sender(from_email, to_email, subject, content):
     to_email = Email(to_email)
     content = Content("text/plain", content)
     mail = Mail(from_email, subject, to_email, content)
-    response = sg.client.mail.send.post(request_body=mail.get())
-    print(response.status_code)
-    print(response.body)
-    print(response.headers)
+    try:
+        response = sg.client.mail.send.post(request_body=mail.get())
+        if response.status_code == 202:
+            return True, ''
+        else:
+            return False, 'Unknown Error'
+
+    except BaseException as e:
+        return False, str(e)
