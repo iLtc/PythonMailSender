@@ -14,11 +14,11 @@ def main(event, context):
         response = {
             "statusCode": 200,
             "body": "OK"
-        };
+        }
         return response
     else:
         response = {
             "statusCode": 500,
             "body": msg
-        };
+        }
         return response
