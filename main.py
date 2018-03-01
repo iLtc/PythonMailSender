@@ -1,42 +1,48 @@
 from sender import sender
 from verifier import verifier
 import json
+import urllib
 
 
 def main(event, context):
-    request_strings = event['body'].split('&')
-    request = {}
-    for request_string in request_strings:
-        key, value = request_string.split('=')
-        request[key] = value
+    request = urllib.parse.parse_qs(event['body'])
 
-    if ('page' not in request) or (request['page'] not in ['HawkEvents']):
+    form_items = [['name', 'your name'],
+                  ['email', 'the e-mail address'],
+                  ['subject', 'the subject'],
+                  ['message', 'the message']]
+
+    for item in form_items:
+        if item[0] not in request:
+            return response_error(400, "Please fill " + item[1])
+
+    if ('page' not in request) or (request['page'][0] not in ['HawkEvents']):
         return response_error(400, "Unknown Page")
 
     if 'g-recaptcha-response' not in request:
-        return response_error(400, "Google Recaptcha Response Not Found")
+        return response_error(400, "Google reCAPTCHA Response Not Found")
 
-    verify_result = verifier(request['page'], request['g-recaptcha-response'])
+    verify_result = verifier(request['page'][0], request['g-recaptcha-response'][0])
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps(verify_result)
-    }
+    if not verify_result['success']:
+        return response_error(403, "Google reCAPTCHA Failed")
 
-    status, msg = sender("i@iltc.io", "i@iltc.io", "Test Email", "This is our second email. We use it to test the function~")
+    to_emails = {'HawkEvents': 'hawkevents@outlook.com'}
+
+
+    status, msg = sender(
+        request['email'][0],
+        to_emails[request['page'][0]],
+        '[{} - {}] '.format(request['page'][0], request['name'][0]) + request['subject'][0],
+        request['message'][0])
 
     if status:
-        response = {
+        return {
             "statusCode": 200,
-            "body": "OK"
+            "body": "Thank you!"
         }
-        return response
     else:
-        response = {
-            "statusCode": 500,
-            "body": msg
-        }
-        return response
+        return response_error(500, "We cannot send the email: " + msg)
 
 
 def response_error(status_code, body):
